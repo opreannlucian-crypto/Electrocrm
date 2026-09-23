@@ -24,11 +24,15 @@ class InvoiceController extends Controller
 {
     public function index(Request $request)
     {
-        $invoices = Invoice::with('client')->latest('issue_date')->get()
+        $documentType = $request->is('proformas') ? 'proforma' : 'invoice';
+        $invoices = Invoice::with('client')->where('document_type', $documentType)->latest('issue_date')->get()
             ->map(fn (Invoice $invoice) => array_merge($invoice->toArray(), [
                 'issue_date' => $invoice->issue_date?->format('d.m.Y'),
             ]));
-        return Inertia::render('Invoices/Index', ['invoices' => $invoices]);
+        return Inertia::render('Invoices/Index', [
+            'invoices' => $invoices,
+            'documentType' => $documentType,
+        ]);
     }
 
     public function create(Request $request)

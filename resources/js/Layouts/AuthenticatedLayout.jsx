@@ -160,9 +160,10 @@ export default function AuthenticatedLayout({
                                         label="Documente"
                                         open={documentsOpen}
                                         onToggle={() => setDocumentsOpen((value) => !value)}
-                                        active={route().current("invoices.*") || route().current("receipts.*") || route().current("receptions.*") || route().current("consumption-notes.*") || route().current("spv.*")}
+                                        active={route().current("invoices.*") || route().current("proformas.*") || route().current("receipts.*") || route().current("receptions.*") || route().current("consumption-notes.*") || route().current("spv.*")}
                                     >
                                         <SidebarLink href={route("invoices.index")} active={route().current("invoices.*")} icon="🧾" label="Facturi" />
+                                        <SidebarLink href={route("proformas.index")} active={route().current("proformas.*")} icon="📄" label="Proforme" />
                                         <SidebarLink href={route("receipts.index")} active={route().current("receipts.*")} icon="💰" label="Încasări" />
                                         <SidebarLink href={route("receptions.index")} active={route().current("receptions.*")} icon="📥" label="Recepții furnizori" />
                                         <SidebarLink href={route("spv.index")} active={route().current("spv.*")} icon="🏛️" label="SPV – Facturi primite" />
@@ -571,6 +572,7 @@ export default function AuthenticatedLayout({
                                 <div className="space-y-1 pt-2" style={{ display: isTechnician ? "none" : undefined }}>
                                     <MobileSection label="📄 Documente" open={documentsOpen} onToggle={() => setDocumentsOpen((value) => !value)}>
                                         <ResponsiveNavLink href={route("invoices.index")} active={route().current("invoices.*")}>🧾 Facturi</ResponsiveNavLink>
+                                        <ResponsiveNavLink href={route("proformas.index")} active={route().current("proformas.*")}>📄 Proforme</ResponsiveNavLink>
                                         <ResponsiveNavLink href={route("receipts.index")} active={route().current("receipts.*")}>💰 Încasări</ResponsiveNavLink>
                                         <ResponsiveNavLink href={route("receptions.index")} active={route().current("receptions.*")}>📥 Recepții furnizori</ResponsiveNavLink>
                                         <ResponsiveNavLink href={route("spv.index")} active={route().current("spv.*")}>🏛️ SPV – Facturi primite</ResponsiveNavLink>

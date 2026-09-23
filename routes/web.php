@@ -734,6 +734,7 @@ Route::post(
     Route::post('/financial-reports/cash-register/opening-balance', [CashRegisterReportController::class, 'setOpeningBalance'])->middleware('module:invoices')->name('financial-reports.cash-register.opening-balance.store');
     Route::delete('/financial-reports/cash-register/payments/{cashPayment}', [CashRegisterReportController::class, 'destroy'])->middleware('module:invoices')->name('financial-reports.cash-register.payments.destroy');
 
+    Route::get('/proformas', [InvoiceController::class, 'index'])->middleware('module:invoices')->name('proformas.index');
     Route::get('/proformas/create', [InvoiceController::class, 'create'])->middleware('module:invoices')->name('proformas.create');
     Route::post('/proformas', [InvoiceController::class, 'store'])->middleware('module:invoices')->name('proformas.store');
     Route::post('/invoices/{invoice}/convert-to-invoice', [InvoiceController::class, 'convertToInvoice'])->middleware('module:invoices')->name('invoices.convert');
