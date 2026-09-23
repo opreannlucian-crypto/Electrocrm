@@ -1059,6 +1059,7 @@ class QuoteController extends Controller
     ) {
         $quote->load([
             'client',
+            'preparedBy.employee',
             'workOrder',
             'license',
             'items.product',
