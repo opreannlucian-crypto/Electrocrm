@@ -37,6 +37,11 @@ class Quote extends Model
         return $this->belongsTo(Client::class);
     }
 
+    public function preparedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'prepared_by')->with('employee');
+    }
+
     /**
      * Lucrarea asociată
      */

@@ -1968,6 +1968,14 @@
     @endif
 
 
+    @if($quote->preparedBy)
+        <div style="margin-top: 18px; padding: 10px 11px; border: 1px solid #d9e1ea; background: #fafcff; font-size: 7px; color: #334155;">
+            <strong>Întocmit de:</strong> {{ $quote->preparedBy->name }}
+            @if($quote->preparedBy->employee?->position) · {{ $quote->preparedBy->employee->position }} @endif
+            @if($quote->preparedBy->employee?->phone) · Tel: {{ $quote->preparedBy->employee->phone }} @endif
+        </div>
+    @endif
+
     {{-- ============================================================
          FOOTER
     ============================================================= --}}

@@ -25,6 +25,7 @@ class QuoteController extends Controller
     {
         $quotes = Quote::with([
             'client',
+            'preparedBy.employee',
             'workOrder',
             'license',
             'items',
