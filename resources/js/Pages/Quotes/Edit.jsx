@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 export default function Edit({
     quote,
     clients = [],
+    users = [],
     licenses = [],
     products = [],
 }) {
@@ -64,6 +65,8 @@ export default function Edit({
 
         client_name:
             quote?.client?.name ?? clients.find((client) => String(client.id) === String(quote?.client_id))?.name ?? "",
+
+        prepared_by: quote?.prepared_by ?? "",
 
         license_id:
             quote?.license_id ?? "",
@@ -488,6 +491,7 @@ export default function Edit({
                                         </label>
 
                                         <ClientAutocomplete clients={clients} clientId={data.client_id} value={data.client_name} onChange={({ client_id, client_name }) => setData((current) => ({ ...current, client_id, client_name }))} error={errors.client_id || errors.client_name} />
+                                        <label className="mt-4 block text-sm font-semibold text-gray-700">Întocmit de<select value={data.prepared_by} onChange={(event) => setData('prepared_by', event.target.value)} className="mt-1 w-full rounded-xl border-gray-300"><option value="">Utilizatorul conectat</option>{users.map((user) => <option key={user.id} value={user.id}>{user.name}</option>)}</select></label>
 
                                     </div>
 

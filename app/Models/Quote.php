@@ -11,6 +11,7 @@ class Quote extends Model
     protected $fillable = [
         'work_order_id',
         'client_id',
+        'prepared_by',
         'license_id',
         'number',
         'type',

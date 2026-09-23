@@ -9,6 +9,7 @@ use App\Models\Quote;
 use App\Models\QuoteTemplate;
 use App\Models\StockMovement;
 use App\Models\WorkOrder;
+use App\Models\User;
 use App\Models\WorkOrderMaterial;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -553,6 +554,7 @@ class QuoteController extends Controller
                     Client::orderBy(
                         'name'
                     )->get(),
+                'users' => User::orderBy('name')->get(['id','name']),
 
                 'licenses' =>
                     License::where(
@@ -649,7 +651,8 @@ class QuoteController extends Controller
         $quote =
             DB::transaction(
                 function () use (
-                    $validated
+                    $validated,
+                    $request
                 ) {
 
                     $type =
@@ -672,6 +675,7 @@ class QuoteController extends Controller
                                 $validated[
                                     'client_id'
                                 ],
+                            'prepared_by' => $validated['prepared_by'] ?? $request->user()->id,
 
                             'license_id' =>
                                 $validated[
@@ -827,6 +831,7 @@ class QuoteController extends Controller
                     Client::orderBy(
                         'name'
                     )->get(),
+                'users' => User::orderBy('name')->get(['id','name']),
 
                 'licenses' =>
                     License::where(
@@ -914,6 +919,7 @@ class QuoteController extends Controller
                         $validated[
                             'client_id'
                         ],
+                    'prepared_by' => $validated['prepared_by'] ?? $quote->prepared_by,
 
                     'license_id' =>
                         $validated[
@@ -1901,6 +1907,8 @@ class QuoteController extends Controller
                 'string',
                 'max:255',
             ],
+
+            'prepared_by' => ['nullable', 'exists:users,id'],
 
             'license_id' => [
                 'nullable',

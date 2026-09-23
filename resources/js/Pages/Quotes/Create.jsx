@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 
 export default function Create({
     clients = [],
+    users = [],
     products = [],
     licenses = [],
     workOrders = [],
@@ -120,6 +121,8 @@ export default function Create({
 
         client_name:
             prefill?.client_name ?? clientNameForId(prefill?.client_id),
+
+        prepared_by: prefill?.prepared_by ?? "",
 
         license_id:
             prefill?.license_id ?? "",
@@ -904,6 +907,8 @@ export default function Create({
                                         onChange={({ client_id, client_name }) => setData((current) => ({ ...current, client_id, client_name }))}
                                         error={errors.client_id || errors.client_name}
                                     />
+
+                                    <label className="mt-4 block text-sm font-semibold text-slate-700">Întocmit de<select value={data.prepared_by} onChange={(event) => setData('prepared_by', event.target.value)} className="mt-1 w-full rounded-xl border-slate-300"><option value="">Utilizatorul conectat</option>{users.map((user) => <option key={user.id} value={user.id}>{user.name}</option>)}</select></label>
 
                                 </div>
                                 )}
