@@ -1,4 +1,5 @@
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
+import ClientAutocomplete from "@/Components/ClientAutocomplete";
 import { Head, Link, useForm } from "@inertiajs/react";
 import { useMemo, useState } from "react";
 
@@ -60,6 +61,9 @@ export default function Edit({
 
         client_id:
             quote?.client_id ?? "",
+
+        client_name:
+            quote?.client?.name ?? clients.find((client) => String(client.id) === String(quote?.client_id))?.name ?? "",
 
         license_id:
             quote?.license_id ?? "",
@@ -483,53 +487,7 @@ export default function Edit({
                                             Client *
                                         </label>
 
-                                        <select
-                                            value={
-                                                data.client_id
-                                            }
-                                            onChange={(e) =>
-                                                setData(
-                                                    "client_id",
-                                                    e
-                                                        .target
-                                                        .value
-                                                )
-                                            }
-                                            className="w-full rounded-xl border-gray-300 shadow-sm"
-                                        >
-
-                                            <option value="">
-                                                Selectează clientul
-                                            </option>
-
-                                            {clients.map(
-                                                (
-                                                    client
-                                                ) => (
-                                                    <option
-                                                        key={
-                                                            client.id
-                                                        }
-                                                        value={
-                                                            client.id
-                                                        }
-                                                    >
-                                                        {
-                                                            client.name
-                                                        }
-                                                    </option>
-                                                )
-                                            )}
-
-                                        </select>
-
-                                        {errors.client_id && (
-                                            <p className="text-red-600 text-sm mt-1">
-                                                {
-                                                    errors.client_id
-                                                }
-                                            </p>
-                                        )}
+                                        <ClientAutocomplete clients={clients} clientId={data.client_id} value={data.client_name} onChange={({ client_id, client_name }) => setData((current) => ({ ...current, client_id, client_name }))} error={errors.client_id || errors.client_name} />
 
                                     </div>
 
