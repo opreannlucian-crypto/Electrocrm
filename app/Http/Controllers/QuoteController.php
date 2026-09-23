@@ -554,7 +554,7 @@ class QuoteController extends Controller
                     Client::orderBy(
                         'name'
                     )->get(),
-                'users' => User::orderBy('name')->get(['id','name']),
+                'users' => User::with('employee:id,phone,position')->orderBy('name')->get(['id','name','employee_id']),
 
                 'licenses' =>
                     License::where(
@@ -831,7 +831,7 @@ class QuoteController extends Controller
                     Client::orderBy(
                         'name'
                     )->get(),
-                'users' => User::orderBy('name')->get(['id','name']),
+                'users' => User::with('employee:id,phone,position')->orderBy('name')->get(['id','name','employee_id']),
 
                 'licenses' =>
                     License::where(

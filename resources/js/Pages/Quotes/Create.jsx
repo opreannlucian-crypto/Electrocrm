@@ -173,6 +173,7 @@ export default function Create({
     });
 
     const [draftItem, setDraftItem] = useState(emptyDraftItem());
+    const selectedPreparer = users.find((user) => String(user.id) === String(data.prepared_by));
 
     /*
     |--------------------------------------------------------------------------
@@ -908,7 +909,7 @@ export default function Create({
                                         error={errors.client_id || errors.client_name}
                                     />
 
-                                    <label className="mt-4 block text-sm font-semibold text-slate-700">Întocmit de<select value={data.prepared_by} onChange={(event) => setData('prepared_by', event.target.value)} className="mt-1 w-full rounded-xl border-slate-300"><option value="">Utilizatorul conectat</option>{users.map((user) => <option key={user.id} value={user.id}>{user.name}</option>)}</select></label>
+                                    <label className="mt-4 block text-sm font-semibold text-slate-700">Întocmit de<select value={data.prepared_by} onChange={(event) => setData('prepared_by', event.target.value)} className="mt-1 w-full rounded-xl border-slate-300"><option value="">Utilizatorul conectat</option>{users.map((user) => <option key={user.id} value={user.id}>{user.name}</option>)}</select></label>{selectedPreparer && <p className="mt-2 text-xs text-slate-600">{selectedPreparer.employee?.position || 'Funcție necompletată'} · {selectedPreparer.employee?.phone || 'Telefon necompletat'}</p>}
 
                                 </div>
                                 )}
