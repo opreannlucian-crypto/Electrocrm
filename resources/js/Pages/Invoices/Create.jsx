@@ -1,4 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import ClientAutocomplete from '@/Components/ClientAutocomplete';
 import { Head, Link, useForm } from '@inertiajs/react';
 
 const VAT_RATES = [0, 5, 9, 19, 21];
@@ -25,6 +26,7 @@ export default function Create({ clients = [], products = [], services = [], wor
   const { data, setData, post, put, processing, errors } = useForm({
     document_type: documentType,
     client_id: invoice?.client_id ?? sourceQuote?.client_id ?? '',
+    client_name: invoice?.client?.name ?? clients.find((client) => String(client.id) === String(invoice?.client_id ?? sourceQuote?.client_id))?.name ?? '',
     quote_id: invoice?.quote_id ?? sourceQuote?.id ?? '',
     work_order_id: invoice?.work_order_id ?? sourceQuote?.work_order_id ?? '',
     series: (invoice?.series ?? defaultSeries) || (documentType === 'proforma' ? 'PF' : (companyProfile.invoice_series ?? 'F')),
@@ -137,13 +139,7 @@ export default function Create({ clients = [], products = [], services = [], wor
               <label className="text-sm font-semibold text-slate-700">Data încasării
                 <input type="date" value={data.collection_date} onChange={(event) => setData('collection_date', event.target.value)} className="mt-1 w-full rounded-lg border-slate-300" />
               </label>
-              <label className="text-sm font-semibold text-slate-700 md:col-span-2">Client
-                <select value={data.client_id} onChange={(event) => setData('client_id', event.target.value)} className="mt-1 w-full rounded-lg border-slate-300">
-                  <option value="">Selectează clientul</option>
-                  {clients.map((client) => <option key={client.id} value={client.id}>{client.name}{client.cui ? ` · ${client.cui}` : ''}</option>)}
-                </select>
-                {errors.client_id && <p className="mt-1 text-sm text-red-600">{errors.client_id}</p>}
-              </label>
+              <div className="text-sm font-semibold text-slate-700 md:col-span-2">Client<ClientAutocomplete clients={clients} clientId={data.client_id} value={data.client_name} onChange={({ client_id, client_name }) => setData((current) => ({ ...current, client_id, client_name }))} error={errors.client_id || errors.client_name} /></div>
               <label className="text-sm font-semibold text-slate-700 md:col-span-2">Nr. lucrare / proiect asociat
                 <select value={data.work_order_id} onChange={(event) => setData('work_order_id', event.target.value)} className="mt-1 w-full rounded-lg border-slate-300">
                   <option value="">Fără lucrare / proiect asociat</option>

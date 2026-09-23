@@ -58,7 +58,8 @@ class InvoiceController extends Controller
     {
         $data = $this->validateInvoice($request);
         $invoice = DB::transaction(function () use ($data, $request) {
-            $client = Client::findOrFail($data['client_id']);
+            $client = $this->resolveClient($data);
+            $data['client_id'] = $client->id;
             $workOrder = filled($data['work_order_id'] ?? null)
                 ? WorkOrder::findOrFail($data['work_order_id'])
                 : null;
@@ -163,7 +164,8 @@ class InvoiceController extends Controller
         $data = $this->validateInvoice($request);
 
         DB::transaction(function () use ($data, $invoice) {
-            $client = Client::findOrFail($data['client_id']);
+            $client = $this->resolveClient($data);
+            $data['client_id'] = $client->id;
             $workOrder = filled($data['work_order_id'] ?? null) ? WorkOrder::findOrFail($data['work_order_id']) : null;
             $company = CompanyProfile::current();
             $vatRate = $client->tva_status === 'neplatitor_tva' ? 0 : (float) ($data['vat_rate'] ?? $company->default_vat_rate ?? 21);
@@ -319,8 +321,15 @@ class InvoiceController extends Controller
     private function validateInvoice(Request $request): array
     {
         return $request->validate([
-            'document_type'=>'nullable|in:invoice,proforma','client_id'=>'required|exists:clients,id','quote_id'=>'nullable|exists:quotes,id','work_order_id'=>'nullable|exists:work_orders,id','series'=>'nullable|string|max:20','issue_date'=>'required|date','due_date'=>'nullable|date|after_or_equal:issue_date','delivery_date'=>'nullable|date','collection_date'=>'nullable|date','vat_rate'=>'nullable|numeric|min:0|max:100','discount'=>'nullable|numeric|min:0|max:100','fixed_discount'=>'nullable|numeric|min:0','notes'=>'nullable|string|max:4000','issuer_name'=>'nullable|string|max:150','issuer_identifier_type'=>'nullable|in:CNP,CI,BI,Pașaport','issuer_identifier'=>'nullable|string|max:100','delegate_name'=>'nullable|string|max:150','accompanying_document_number'=>'nullable|string|max:100','vehicle_number'=>'nullable|string|max:50','items'=>'required|array|min:1','items.*.product_id'=>'nullable|exists:products,id','items.*.service_id'=>'nullable|exists:services,id','items.*.type'=>'required|string','items.*.name'=>'required|string|max:255','items.*.unit'=>'required|string|max:20','items.*.quantity'=>'required|numeric|gt:0','items.*.unit_price'=>'required|numeric|min:0','items.*.discount'=>'nullable|numeric|min:0|max:100','items.*.vat_rate'=>'nullable|numeric|min:0|max:100',
+            'document_type'=>'nullable|in:invoice,proforma','client_id'=>'nullable|exists:clients,id','client_name'=>'required_without:client_id|string|max:255','quote_id'=>'nullable|exists:quotes,id','work_order_id'=>'nullable|exists:work_orders,id','series'=>'nullable|string|max:20','issue_date'=>'required|date','due_date'=>'nullable|date|after_or_equal:issue_date','delivery_date'=>'nullable|date','collection_date'=>'nullable|date','vat_rate'=>'nullable|numeric|min:0|max:100','discount'=>'nullable|numeric|min:0|max:100','fixed_discount'=>'nullable|numeric|min:0','notes'=>'nullable|string|max:4000','issuer_name'=>'nullable|string|max:150','issuer_identifier_type'=>'nullable|in:CNP,CI,BI,Pașaport','issuer_identifier'=>'nullable|string|max:100','delegate_name'=>'nullable|string|max:150','accompanying_document_number'=>'nullable|string|max:100','vehicle_number'=>'nullable|string|max:50','items'=>'required|array|min:1','items.*.product_id'=>'nullable|exists:products,id','items.*.service_id'=>'nullable|exists:services,id','items.*.type'=>'required|string','items.*.name'=>'required|string|max:255','items.*.unit'=>'required|string|max:20','items.*.quantity'=>'required|numeric|gt:0','items.*.unit_price'=>'required|numeric|min:0','items.*.discount'=>'nullable|numeric|min:0|max:100','items.*.vat_rate'=>'nullable|numeric|min:0|max:100',
         ]);
+    }
+
+    private function resolveClient(array $data): Client
+    {
+        if (!empty($data['client_id'])) return Client::findOrFail($data['client_id']);
+        $name = trim((string) $data['client_name']);
+        return Client::query()->whereRaw('LOWER(name) = ?', [mb_strtolower($name)])->first() ?? Client::create(['name' => $name, 'type' => 'firma']);
     }
 
     private function resolveService(array $item): ?Service
