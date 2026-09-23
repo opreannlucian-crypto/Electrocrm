@@ -1,7 +1,10 @@
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head } from "@inertiajs/react";
+import { useState } from "react";
 
 export default function Index({ oblioConfigured, anafPrepared, anafEnvironment }) {
+    const [showAuthorization, setShowAuthorization] = useState(false);
+
     return (
         <AuthenticatedLayout>
             <Head title="SPV – Facturi primite" />
@@ -37,6 +40,9 @@ export default function Index({ oblioConfigured, anafPrepared, anafEnvironment }
                     >
                         <p>Conectorul direct va prelua lista mesajelor SPV, arhiva XML semnată și va bloca automat dublurile înainte de crearea recepției.</p>
                         <p className="mt-3 text-sm text-slate-500">Autorizarea se face cu token API ANAF, nu cu parola SPV. Datele se păstrează doar în configurarea locală a serverului.</p>
+                        <button type="button" onClick={() => setShowAuthorization(true)} className="mt-4 inline-flex rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-blue-700">
+                            Conectează ANAF / SPV →
+                        </button>
                     </ConnectionCard>
                 </div>
 
@@ -55,8 +61,20 @@ export default function Index({ oblioConfigured, anafPrepared, anafEnvironment }
                     </div>
                 </section>
             </div>
+            {showAuthorization && <AuthorizationDialog prepared={anafPrepared} onClose={() => setShowAuthorization(false)} />}
         </AuthenticatedLayout>
     );
+}
+
+function AuthorizationDialog({ prepared, onClose }) {
+    return <div className="fixed inset-0 z-50 flex items-end bg-slate-950/40 p-4 sm:items-center sm:justify-center" role="dialog" aria-modal="true" aria-labelledby="spv-authorization-title">
+        <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4"><div><p className="text-sm font-bold uppercase tracking-wider text-blue-600">ANAF / SPV</p><h2 id="spv-authorization-title" className="mt-1 text-2xl font-bold text-slate-900">Conectează ElectroCRM</h2></div><button type="button" onClick={onClose} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100" aria-label="Închide">✕</button></div>
+            <ol className="mt-6 space-y-4 text-sm text-slate-700"><li className="flex gap-3"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-100 font-bold text-blue-700">1</span><span>Vei fi trimis la ANAF pentru autentificare cu certificatul digital calificat.</span></li><li className="flex gap-3"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-100 font-bold text-blue-700">2</span><span>După acceptare, ANAF te redirecționează automat înapoi în ElectroCRM.</span></li><li className="flex gap-3"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-100 font-bold text-blue-700">3</span><span>De atunci, poți sincroniza facturile primite direct în inbox.</span></li></ol>
+            {!prepared && <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950"><p className="font-bold">Mai este necesară înrolarea aplicației la ANAF.</p><p className="mt-1">Butonul de autorizare real se activează după înregistrarea „ElectroCRM” ca aplicație OAuth în portalul ANAF și configurarea adresei de revenire.</p></div>}
+            <div className="mt-6 flex justify-end gap-3"><button type="button" onClick={onClose} className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-bold text-slate-700">Închide</button><button type="button" disabled={!prepared} className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">Continuă spre ANAF →</button></div>
+        </div>
+    </div>;
 }
 
 function ConnectionCard({ title, icon, ready, readyText, pendingText, children }) {
