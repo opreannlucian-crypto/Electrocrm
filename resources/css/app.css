@@ -1,0 +1,52 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    :root {
+        font-family: Manrope, Inter, "Avenir Next", Avenir, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: #172033;
+        background: #f5f7fb;
+    }
+
+    html { @apply bg-slate-50; }
+    body { @apply min-h-screen bg-slate-50 text-[15px] leading-6 antialiased; font-family: Manrope, Inter, "Avenir Next", Avenir, ui-sans-serif, system-ui, sans-serif !important; }
+    h1 { @apply tracking-[-0.025em] text-slate-950; }
+    h2, h3 { @apply tracking-[-0.015em] text-slate-900; }
+
+    button, [role="button"] {
+        @apply min-h-9 rounded-lg font-semibold transition duration-150 ease-out;
+    }
+
+    input:not([type="checkbox"]):not([type="radio"]), select, textarea {
+        @apply rounded-lg border-slate-300 text-sm text-slate-800 shadow-sm transition placeholder:text-slate-400;
+    }
+
+    input:not([type="checkbox"]):not([type="radio"]), select { @apply min-h-10; }
+    textarea { @apply min-h-20; }
+    input:focus, select:focus, textarea:focus { @apply border-blue-500 ring-2 ring-blue-100; }
+    input[type="checkbox"], input[type="radio"] { @apply rounded border-slate-300 text-blue-600 focus:ring-blue-500; }
+    table th { @apply text-xs font-bold uppercase tracking-wide text-slate-600; }
+}
+
+@layer components {
+    .crm-app { @apply min-h-screen bg-slate-50; }
+    .crm-sidebar { @apply border-slate-200 bg-white shadow-[1px_0_0_rgba(15,23,42,0.02)]; }
+    .crm-panel { @apply rounded-2xl border border-slate-200 bg-white shadow-sm; }
+    .crm-page-title { @apply text-2xl font-bold tracking-[-0.025em] text-slate-950 sm:text-3xl; }
+    .crm-page-subtitle { @apply mt-1 text-sm text-slate-500; }
+    .crm-table { @apply overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm; }
+}
+
+/* Pagini mai vechi: păstrăm funcțiile, dar le aducem în aceeași temă vizuală. */
+@layer utilities {
+    .crm-app, .crm-app * { font-family: Manrope, Inter, "Avenir Next", Avenir, ui-sans-serif, system-ui, sans-serif; }
+    .crm-app .bg-blue-600, .crm-app .bg-indigo-600 { background-color: #1769d1 !important; }
+    .crm-app .hover\:bg-blue-700:hover, .crm-app .hover\:bg-indigo-700:hover { background-color: #0f4e9f !important; }
+    .crm-app .bg-gray-100 { background-color: #f3f6fa !important; }
+    .crm-app .bg-gray-50 { background-color: #f8fafc !important; }
+    .crm-app .border-gray-200 { border-color: #dbe4ef !important; }
+    .crm-app .text-gray-900, .crm-app .text-gray-800 { color: #16243a !important; }
+    .crm-app .text-gray-700, .crm-app .text-gray-600 { color: #44546a !important; }
+    .crm-app button, .crm-app a[class*="bg-blue-"], .crm-app a[class*="bg-indigo-"] { min-height: 40px; border-radius: 10px; }
+}

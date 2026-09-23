@@ -1,0 +1,2 @@
+<?php
+namespace App\Models; use Illuminate\Database\Eloquent\Model; use Illuminate\Database\Eloquent\Relations\HasMany; class Supplier extends Model {protected $fillable=['name','cui','registration_number','address','email','phone','iban','bank','active']; protected $casts=['active'=>'boolean']; public function documents():HasMany{return $this->hasMany(SupplierDocument::class);} public function receptions():HasMany{return $this->hasMany(Reception::class);} public function payments():HasMany{return $this->hasMany(SupplierPayment::class);}}

@@ -1,0 +1,1316 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Client;
+use App\Models\Employee;
+use App\Models\License;
+use App\Models\Product;
+use App\Models\Quote;
+use App\Models\StockMovement;
+use App\Models\WorkOrder;
+use App\Models\WorkOrderMaterial;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\URL;
+use Inertia\Inertia;
+use Barryvdh\DomPDF\Facade\Pdf;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
+
+class WorkOrderController extends Controller
+{
+    /**
+     * Lista lucrarilor
+     */
+    public function index()
+    {
+        return Inertia::render('WorkOrders/Index', [
+            'workOrders' => WorkOrder::with([
+                'client',
+                'employee',
+                'license',
+                'materialsUsed.product',
+            ])
+                ->latest()
+                ->paginate(10),
+        ]);
+    }
+
+    /**
+     * Formular lucrare noua
+     */
+    public function create()
+    {
+        return Inertia::render('WorkOrders/Create', [
+            'clients' => Client::orderBy('name')->get(),
+
+            'employees' => Employee::orderBy('name')->get(),
+
+            'licenses' => License::where('active', true)
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get([
+                    'id',
+                    'name',
+                    'code',
+                    'description',
+                    'image_path',
+                    'active',
+                    'sort_order',
+                ]),
+
+            'products' => Product::where('active', true)
+                ->orderBy('name')
+                ->get([
+                    'id',
+                    'name',
+                    'code',
+                    'ean',
+                    'unit',
+                    'stock_quantity',
+                    'purchase_price',
+                ]),
+        ]);
+    }
+
+    /**
+     * Salveaza lucrare
+     */
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'client_id' => [
+                'required',
+                'exists:clients,id',
+            ],
+
+            'employee_id' => [
+                'nullable',
+                'exists:employees,id',
+            ],
+
+            'license_id' => [
+                'nullable',
+                'exists:licenses,id',
+            ],
+
+            'type' => [
+                'required',
+                'string',
+                'max:255',
+            ],
+
+            'priority' => [
+                'required',
+                'string',
+                'max:50',
+            ],
+
+            'status' => [
+                'required',
+                'string',
+                'max:50',
+            ],
+
+            'scheduled_date' => [
+                'nullable',
+                'date',
+            ],
+
+            'scheduled_time' => [
+                'nullable',
+            ],
+
+            'materials' => [
+                'nullable',
+                'string',
+            ],
+
+            'materials_used' => [
+                'nullable',
+                'array',
+            ],
+
+            'materials_used.*.product_id' => [
+                'required',
+                'integer',
+                'exists:products,id',
+            ],
+
+            'materials_used.*.quantity' => [
+                'required',
+                'numeric',
+                'min:0.01',
+            ],
+
+            'notes' => [
+                'nullable',
+                'string',
+            ],
+
+            'description' => [
+                'nullable',
+                'string',
+            ],
+
+            'address' => [
+                'nullable',
+                'string',
+            ],
+
+            'contact_person' => [
+                'nullable',
+                'string',
+            ],
+
+            'phone' => [
+                'nullable',
+                'string',
+            ],
+        ]);
+
+        if (
+            !empty($validated['scheduled_date']) &&
+            ($validated['status'] ?? 'noua') === 'noua'
+        ) {
+            $validated['status'] = 'programata';
+        }
+
+        $validated['number'] = 'WO-' . date('YmdHis');
+
+        $materialsUsed = $this->normalizeMaterials(
+            $validated['materials_used'] ?? []
+        );
+
+        unset($validated['materials_used']);
+
+        $workOrder = DB::transaction(function () use (
+            $validated,
+            $materialsUsed
+        ) {
+            $workOrder = WorkOrder::create($validated);
+
+            $this->syncMaterials(
+                $workOrder,
+                $materialsUsed,
+                true
+            );
+
+            return $workOrder;
+        });
+
+        return redirect()
+            ->route('work_orders.show', $workOrder)
+            ->with(
+                'success',
+                'Lucrarea a fost creata cu succes.'
+            );
+    }
+
+    /**
+     * Vizualizare lucrare
+     */
+    public function show(WorkOrder $workOrder)
+    {
+        $workOrder->load([
+            'client',
+            'employee',
+            'license',
+            'photos',
+            'materialsUsed.product',
+            'stockMovements.product',
+            'stockMovements.user',
+        ]);
+
+        $quotes = Quote::with([
+            'items',
+            'client',
+            'license',
+        ])
+            ->where(
+                'work_order_id',
+                $workOrder->id
+            )
+            ->latest()
+            ->get();
+
+        return Inertia::render('WorkOrders/Show', [
+            'workOrder' => $workOrder,
+            'quotes' => $quotes,
+
+            'products' => Product::where('active', true)
+                ->orderBy('name')
+                ->get([
+                    'id',
+                    'name',
+                    'code',
+                    'ean',
+                    'unit',
+                    'stock_quantity',
+                    'purchase_price',
+                ]),
+        ]);
+    }
+
+    /**
+     * Formular editare lucrare
+     */
+    public function edit(WorkOrder $workOrder)
+    {
+        $workOrder->load([
+            'client',
+            'employee',
+            'license',
+            'photos',
+            'materialsUsed.product',
+        ]);
+
+        return Inertia::render('WorkOrders/Edit', [
+            'workOrder' => $workOrder,
+
+            'clients' => Client::orderBy('name')->get(),
+
+            'employees' => Employee::orderBy('name')->get(),
+
+            'licenses' => License::where('active', true)
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get([
+                    'id',
+                    'name',
+                    'code',
+                    'description',
+                    'image_path',
+                    'active',
+                    'sort_order',
+                ]),
+
+            'products' => Product::where('active', true)
+                ->orderBy('name')
+                ->get([
+                    'id',
+                    'name',
+                    'code',
+                    'ean',
+                    'unit',
+                    'stock_quantity',
+                    'purchase_price',
+                ]),
+        ]);
+    }
+
+    /**
+     * Actualizare lucrare
+     */
+    public function update(
+        Request $request,
+        WorkOrder $workOrder
+    ) {
+        $validated = $request->validate([
+            'client_id' => [
+                'required',
+                'exists:clients,id',
+            ],
+
+            'employee_id' => [
+                'nullable',
+                'exists:employees,id',
+            ],
+
+            'license_id' => [
+                'nullable',
+                'exists:licenses,id',
+            ],
+
+            'type' => [
+                'required',
+                'string',
+                'max:255',
+            ],
+
+            'priority' => [
+                'required',
+                'string',
+                'max:50',
+            ],
+
+            'status' => [
+                'required',
+                'string',
+                'max:50',
+            ],
+
+            'scheduled_date' => [
+                'nullable',
+                'date',
+            ],
+
+            'scheduled_time' => [
+                'nullable',
+            ],
+
+            'materials' => [
+                'nullable',
+                'string',
+            ],
+
+            'materials_used' => [
+                'nullable',
+                'array',
+            ],
+
+            'materials_used.*.product_id' => [
+                'required',
+                'integer',
+                'exists:products,id',
+            ],
+
+            'materials_used.*.quantity' => [
+                'required',
+                'numeric',
+                'min:0.01',
+            ],
+
+            'notes' => [
+                'nullable',
+                'string',
+            ],
+
+            'description' => [
+                'nullable',
+                'string',
+            ],
+
+            'address' => [
+                'nullable',
+                'string',
+            ],
+
+            'contact_person' => [
+                'nullable',
+                'string',
+            ],
+
+            'phone' => [
+                'nullable',
+                'string',
+            ],
+        ]);
+
+        if (
+            !empty($validated['scheduled_date']) &&
+            ($validated['status'] ?? 'noua') === 'noua'
+        ) {
+            $validated['status'] = 'programata';
+        }
+
+        if (
+            empty($validated['scheduled_date']) &&
+            $workOrder->status === 'programata' &&
+            ($validated['status'] ?? null) === 'programata'
+        ) {
+            $validated['status'] = 'noua';
+        }
+
+        $materialsUsed = $this->normalizeMaterials(
+            $validated['materials_used'] ?? []
+        );
+
+        unset($validated['materials_used']);
+
+        DB::transaction(function () use (
+            $workOrder,
+            $validated,
+            $materialsUsed
+        ) {
+            $workOrder->update($validated);
+
+            $this->syncMaterials(
+                $workOrder,
+                $materialsUsed,
+                false
+            );
+        });
+
+        return redirect()
+            ->route('work_orders.show', $workOrder)
+            ->with(
+                'success',
+                'Lucrarea si materialele au fost actualizate.'
+            );
+    }
+
+    /**
+     * Schimbare rapida status
+     */
+    public function updateStatus(
+        Request $request,
+        WorkOrder $workOrder
+    ) {
+        $validated = $request->validate([
+            'status' => [
+                'required',
+                'string',
+                'in:noua,programata,lucru,finalizata,anulata',
+            ],
+        ]);
+
+        $newStatus = $validated['status'];
+
+        if (
+            $newStatus === 'programata' &&
+            empty($workOrder->scheduled_date)
+        ) {
+            return back()->with(
+                'error',
+                'Pentru statusul "Programata" trebuie sa existe o data programata.'
+            );
+        }
+
+        $workOrder->update([
+            'status' => $newStatus,
+        ]);
+
+        $statusMessages = [
+            'noua' =>
+                'Lucrarea a fost trecuta in statusul "Noua".',
+
+            'programata' =>
+                'Lucrarea a fost programata.',
+
+            'lucru' =>
+                'Lucrarea a fost trecuta "In lucru".',
+
+            'finalizata' =>
+                'Lucrarea a fost finalizata.',
+
+            'anulata' =>
+                'Lucrarea a fost anulata.',
+        ];
+
+        return back()->with(
+            'success',
+            $statusMessages[$newStatus]
+                ?? 'Statusul lucrarii a fost actualizat.'
+        );
+    }
+
+    /**
+     * Proces-verbal editabil + PDF
+     *
+     * GET:
+     * Afiseaza formularul editabil cu date preluate
+     * din lucrare si ultima oferta/deviz asociata.
+     *
+     * POST:
+     * Genereaza PDF-ul folosind datele editate
+     * de utilizator.
+     */
+    public function report(
+        Request $request,
+        WorkOrder $workOrder
+    ) {
+        $workOrder->load([
+            'client',
+            'employee',
+            'license',
+            'photos',
+        ]);
+
+        $latestQuote = Quote::with([
+            'items.product',
+            'client',
+            'license',
+        ])
+            ->where(
+                'work_order_id',
+                $workOrder->id
+            )
+            ->latest()
+            ->first();
+
+        if ($request->isMethod('post')) {
+
+            $validated = $request->validate([
+                'report_title' => [
+                    'required',
+                    'string',
+                    'max:255',
+                ],
+
+                'document_date' => [
+                    'required',
+                    'date',
+                ],
+
+                'work_order_number' => [
+                    'nullable',
+                    'string',
+                    'max:255',
+                ],
+
+                'quote_number' => [
+                    'nullable',
+                    'string',
+                    'max:255',
+                ],
+
+                'quote_title' => [
+                    'nullable',
+                    'string',
+                    'max:255',
+                ],
+
+                'client_name' => [
+                    'required',
+                    'string',
+                    'max:255',
+                ],
+
+                'client_cui' => [
+                    'nullable',
+                    'string',
+                    'max:255',
+                ],
+
+                'client_address' => [
+                    'nullable',
+                    'string',
+                    'max:1000',
+                ],
+
+                'client_phone' => [
+                    'nullable',
+                    'string',
+                    'max:255',
+                ],
+
+                'contact_person' => [
+                    'nullable',
+                    'string',
+                    'max:255',
+                ],
+
+                'technician_name' => [
+                    'nullable',
+                    'string',
+                    'max:255',
+                ],
+
+                'technician_position' => [
+                    'nullable',
+                    'string',
+                    'max:255',
+                ],
+
+                'work_type' => [
+                    'nullable',
+                    'string',
+                    'max:255',
+                ],
+
+                'scheduled_date' => [
+                    'nullable',
+                    'date',
+                ],
+
+                'scheduled_time' => [
+                    'nullable',
+                    'string',
+                    'max:20',
+                ],
+
+                'work_address' => [
+                    'nullable',
+                    'string',
+                    'max:1000',
+                ],
+
+                'description' => [
+                    'nullable',
+                    'string',
+                ],
+
+                'work_performed' => [
+                    'nullable',
+                    'string',
+                ],
+
+                'conclusion' => [
+                    'nullable',
+                    'string',
+                ],
+
+                'observations' => [
+                    'nullable',
+                    'string',
+                ],
+
+                'provider_signature_name' => [
+                    'nullable',
+                    'string',
+                    'max:255',
+                ],
+
+                'client_signature_name' => [
+                    'nullable',
+                    'string',
+                    'max:255',
+                ],
+            ]);
+
+            $pdf = Pdf::loadView(
+                'work_orders.report',
+                [
+                    'workOrder' =>
+                        $workOrder,
+
+                    'latestQuote' =>
+                        $latestQuote,
+
+                    'reportData' =>
+                        $validated,
+
+                    'generatedAt' =>
+                        now(),
+                ]
+            );
+
+            $pdf->setPaper(
+                'A4',
+                'portrait'
+            );
+
+            $safeNumber =
+                preg_replace(
+                    '/[^A-Za-z0-9\-_]/',
+                    '_',
+                    $validated[
+                        'work_order_number'
+                    ] ?: (
+                        $workOrder->number
+                        ?? 'Lucrare'
+                    )
+                );
+
+            $fileName =
+                'Proces-Verbal-' .
+                $safeNumber .
+                '.pdf';
+
+            return $pdf->stream(
+                $fileName
+            );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Tip raport
+        |--------------------------------------------------------------------------
+        */
+
+        $reportType =
+            $request->query(
+                'type',
+                'interventie'
+            );
+
+        $reportTitles = [
+            'interventie' =>
+                'PROCES-VERBAL DE INTERVENTIE',
+
+            'service' =>
+                'PROCES-VERBAL DE SERVICE',
+
+            'punere_in_functiune' =>
+                'PROCES-VERBAL DE PUNERE IN FUNCTIUNE',
+
+            'receptie' =>
+                'PROCES-VERBAL DE RECEPTIE',
+
+            'constatare' =>
+                'PROCES-VERBAL DE CONSTATARE',
+
+            'lucrare' =>
+                'PROCES-VERBAL',
+        ];
+
+        $defaultTitle =
+            $reportTitles[$reportType]
+            ?? 'PROCES-VERBAL DE INTERVENTIE';
+
+        if (
+            $reportType === 'lucrare'
+        ) {
+            $defaultTitle =
+                $latestQuote?->title
+                ?? $workOrder->type
+                ?? 'PROCES-VERBAL';
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Materiale NU sunt preluate in procesul-verbal.
+        |--------------------------------------------------------------------------
+        */
+
+        return view(
+            'work_orders.report_edit',
+            [
+                'workOrder' =>
+                    $workOrder,
+
+                'latestQuote' =>
+                    $latestQuote,
+
+                'reportType' =>
+                    $reportType,
+
+                'defaultTitle' =>
+                    $defaultTitle,
+            ]
+        );
+    }
+
+    /**
+     * Stergere lucrare
+     *
+     * Materialele sunt returnate in stoc.
+     */
+    public function destroy(
+        WorkOrder $workOrder
+    ) {
+        DB::transaction(function () use ($workOrder) {
+
+            $workOrder->load([
+                'materialsUsed.product',
+            ]);
+
+            foreach (
+                $workOrder->materialsUsed
+                as $material
+            ) {
+
+                $product =
+                    Product::query()
+                        ->lockForUpdate()
+                        ->find(
+                            $material->product_id
+                        );
+
+                if (!$product) {
+                    continue;
+                }
+
+                $stockBefore =
+                    (float)
+                    $product->stock_quantity;
+
+                $quantity =
+                    (float)
+                    $material->quantity;
+
+                $stockAfter =
+                    $stockBefore +
+                    $quantity;
+
+                StockMovement::create([
+                    'product_id' =>
+                        $product->id,
+
+                    'type' =>
+                        'in',
+
+                    'quantity' =>
+                        $quantity,
+
+                    'stock_before' =>
+                        $stockBefore,
+
+                    'stock_after' =>
+                        $stockAfter,
+
+                    'unit_price' =>
+                        $material->unit_price
+                        ?? $product->purchase_price,
+
+                    'reference_type' =>
+                        'work_order_reversal',
+
+                    'reference_id' =>
+                        $workOrder->id,
+
+                    'document_number' =>
+                        $workOrder->number,
+
+                    'reason' =>
+                        'Returnare materiale la stergerea lucrarii',
+
+                    'work_order_id' =>
+                        $workOrder->id,
+
+                    'user_id' =>
+                        auth()->id(),
+
+                    'notes' =>
+                        'Material returnat automat in stoc la stergerea lucrarii.',
+                ]);
+
+                $product->update([
+                    'stock_quantity' =>
+                        $stockAfter,
+                ]);
+            }
+
+            $workOrder->delete();
+        });
+
+        return redirect()
+            ->route('work_orders.index')
+            ->with(
+                'success',
+                'Lucrarea a fost stearsa, iar materialele au fost returnate in stoc.'
+            );
+    }
+
+    /**
+     * QR lucrare
+     */
+    public function qr(
+        WorkOrder $workOrder
+    ) {
+        $url = URL::signedRoute(
+            'work_orders.scan',
+            [
+                'workOrder' =>
+                    $workOrder->id,
+            ]
+        );
+
+        $qr =
+            QrCode::format('svg')
+                ->size(500)
+                ->margin(2)
+                ->errorCorrection('H')
+                ->generate($url);
+
+        return response($qr)
+            ->header(
+                'Content-Type',
+                'image/svg+xml'
+            )
+            ->header(
+                'Cache-Control',
+                'no-store, no-cache, must-revalidate'
+            );
+    }
+
+    /**
+     * Scanare QR
+     */
+    public function scan(
+        WorkOrder $workOrder
+    ) {
+        return redirect()->route(
+            'work_orders.show',
+            $workOrder
+        );
+    }
+
+    /**
+     * Normalizeaza materialele.
+     */
+    protected function normalizeMaterials(
+        array $materials
+    ): array {
+        $normalized = [];
+
+        foreach ($materials as $material) {
+
+            $productId =
+                (int) (
+                    $material['product_id']
+                    ?? 0
+                );
+
+            $quantity =
+                (float) (
+                    $material['quantity']
+                    ?? 0
+                );
+
+            if (
+                $productId <= 0 ||
+                $quantity <= 0
+            ) {
+                continue;
+            }
+
+            if (
+                isset(
+                    $normalized[$productId]
+                )
+            ) {
+                $normalized[$productId]['quantity'] +=
+                    $quantity;
+            } else {
+                $normalized[$productId] = [
+                    'product_id' =>
+                        $productId,
+
+                    'quantity' =>
+                        $quantity,
+                ];
+            }
+        }
+
+        return array_values(
+            $normalized
+        );
+    }
+
+    /**
+     * Sincronizare materiale.
+     */
+    protected function syncMaterials(
+        WorkOrder $workOrder,
+        array $newMaterials,
+        bool $creating = false
+    ): void {
+        $oldMaterials =
+            $workOrder->materialsUsed()
+                ->get()
+                ->keyBy('product_id');
+
+        $newMaterialsByProduct =
+            collect($newMaterials)
+                ->keyBy('product_id');
+
+        $allProductIds =
+            collect(
+                array_merge(
+                    $oldMaterials
+                        ->keys()
+                        ->all(),
+
+                    $newMaterialsByProduct
+                        ->keys()
+                        ->all()
+                )
+            )
+                ->map(
+                    fn ($id) =>
+                        (int) $id
+                )
+                ->unique()
+                ->values();
+
+        foreach (
+            $allProductIds
+            as $productId
+        ) {
+
+            $oldMaterial =
+                $oldMaterials->get(
+                    $productId
+                );
+
+            $newMaterial =
+                $newMaterialsByProduct->get(
+                    $productId
+                );
+
+            $oldQuantity =
+                $oldMaterial
+                    ? (float)
+                        $oldMaterial->quantity
+                    : 0;
+
+            $newQuantity =
+                $newMaterial
+                    ? (float)
+                        $newMaterial['quantity']
+                    : 0;
+
+            $difference =
+                $newQuantity -
+                $oldQuantity;
+
+            if (
+                abs($difference) <
+                0.00001
+            ) {
+
+                if (
+                    $oldMaterial &&
+                    $newMaterial
+                ) {
+                    $this->updateMaterialRow(
+                        $oldMaterial,
+                        $newQuantity
+                    );
+                }
+
+                continue;
+            }
+
+            $product =
+                Product::query()
+                    ->lockForUpdate()
+                    ->findOrFail(
+                        $productId
+                    );
+
+            $currentStock =
+                (float)
+                $product->stock_quantity;
+
+            if (
+                $difference > 0
+            ) {
+
+                $this->createStockOut(
+                    $workOrder,
+                    $product,
+                    $difference,
+                    $currentStock
+                );
+            }
+
+            if (
+                $difference < 0
+            ) {
+
+                $this->createStockIn(
+                    $workOrder,
+                    $product,
+                    abs($difference),
+                    $currentStock
+                );
+            }
+
+            if (
+                $newQuantity > 0
+            ) {
+
+                $unitPrice =
+                    $oldMaterial?->unit_price
+                    ?? $product->purchase_price
+                    ?? 0;
+
+                $totalPrice =
+                    round(
+                        $newQuantity *
+                        (float) $unitPrice,
+                        2
+                    );
+
+                if ($oldMaterial) {
+
+                    $oldMaterial->update([
+                        'quantity' =>
+                            $newQuantity,
+
+                        'unit_price' =>
+                            $unitPrice,
+
+                        'total_price' =>
+                            $totalPrice,
+                    ]);
+
+                } else {
+
+                    WorkOrderMaterial::create([
+                        'work_order_id' =>
+                            $workOrder->id,
+
+                        'product_id' =>
+                            $product->id,
+
+                        'quantity' =>
+                            $newQuantity,
+
+                        'unit_price' =>
+                            $unitPrice,
+
+                        'total_price' =>
+                            $totalPrice,
+                    ]);
+                }
+
+            } elseif ($oldMaterial) {
+
+                $oldMaterial->delete();
+            }
+        }
+    }
+
+    /**
+     * Iesire stoc.
+     */
+    protected function createStockOut(
+        WorkOrder $workOrder,
+        Product $product,
+        float $quantity,
+        float $stockBefore
+    ): void {
+        $stockAfter =
+            $stockBefore -
+            $quantity;
+
+        if (
+            $stockAfter < 0
+        ) {
+            abort(
+                422,
+                'Stoc insuficient pentru produsul "' .
+                $product->name .
+                '". Disponibil: ' .
+                number_format(
+                    $stockBefore,
+                    2,
+                    '.',
+                    ''
+                ) .
+                ', necesar suplimentar: ' .
+                number_format(
+                    $quantity,
+                    2,
+                    '.',
+                    ''
+                ) .
+                '.'
+            );
+        }
+
+        StockMovement::create([
+            'product_id' =>
+                $product->id,
+
+            'type' =>
+                'out',
+
+            'quantity' =>
+                $quantity,
+
+            'stock_before' =>
+                $stockBefore,
+
+            'stock_after' =>
+                $stockAfter,
+
+            'unit_price' =>
+                $product->purchase_price,
+
+            'reference_type' =>
+                'work_order_material',
+
+            'reference_id' =>
+                $workOrder->id,
+
+            'document_number' =>
+                $workOrder->number,
+
+            'reason' =>
+                'Consum material in lucrare',
+
+            'work_order_id' =>
+                $workOrder->id,
+
+            'user_id' =>
+                auth()->id(),
+
+            'notes' =>
+                'Consum automat de material din lucrare.',
+        ]);
+
+        $product->update([
+            'stock_quantity' =>
+                $stockAfter,
+        ]);
+    }
+
+    /**
+     * Intrare stoc.
+     */
+    protected function createStockIn(
+        WorkOrder $workOrder,
+        Product $product,
+        float $quantity,
+        float $stockBefore
+    ): void {
+        $stockAfter =
+            $stockBefore +
+            $quantity;
+
+        StockMovement::create([
+            'product_id' =>
+                $product->id,
+
+            'type' =>
+                'in',
+
+            'quantity' =>
+                $quantity,
+
+            'stock_before' =>
+                $stockBefore,
+
+            'stock_after' =>
+                $stockAfter,
+
+            'unit_price' =>
+                $product->purchase_price,
+
+            'reference_type' =>
+                'work_order_material_return',
+
+            'reference_id' =>
+                $workOrder->id,
+
+            'document_number' =>
+                $workOrder->number,
+
+            'reason' =>
+                'Returnare material din lucrare',
+
+            'work_order_id' =>
+                $workOrder->id,
+
+            'user_id' =>
+                auth()->id(),
+
+            'notes' =>
+                'Material returnat automat in stoc la modificarea consumului.',
+        ]);
+
+        $product->update([
+            'stock_quantity' =>
+                $stockAfter,
+        ]);
+    }
+
+    /**
+     * Actualizeaza randul materialului.
+     */
+    protected function updateMaterialRow(
+        WorkOrderMaterial $material,
+        float $quantity
+    ): void {
+        $unitPrice =
+            $material->unit_price ??
+            0;
+
+        $material->update([
+            'quantity' =>
+                $quantity,
+
+            'total_price' =>
+                round(
+                    $quantity *
+                    (float) $unitPrice,
+                    2
+                ),
+        ]);
+    }
+}

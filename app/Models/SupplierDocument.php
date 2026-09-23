@@ -1,0 +1,2 @@
+<?php
+namespace App\Models; use Illuminate\Database\Eloquent\Model; use Illuminate\Database\Eloquent\Relations\BelongsTo; class SupplierDocument extends Model {protected $fillable=['supplier_id','document_type','series','number','document_date','due_date','subtotal','vat_amount','total','paid_amount','status','notes']; protected $casts=['document_date'=>'date','due_date'=>'date','subtotal'=>'decimal:2','vat_amount'=>'decimal:2','total'=>'decimal:2','paid_amount'=>'decimal:2']; public function supplier():BelongsTo{return $this->belongsTo(Supplier::class);} }
