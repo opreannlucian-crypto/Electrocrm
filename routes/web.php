@@ -22,6 +22,7 @@ use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\ReceiptController;
 use App\Http\Controllers\ReceiptReportController;
 use App\Http\Controllers\StockReportController;
+use App\Http\Controllers\SpvInboxController;
 use App\Http\Controllers\MinutesReportController;
 use App\Http\Controllers\ContractsReportController;
 use App\Http\Controllers\StockMovementController;
@@ -107,6 +108,10 @@ Route::middleware([
         CalendarController::class,
         'index',
     ])->middleware('module:calendar')->name('calendar.index');
+
+    Route::get('/spv', [SpvInboxController::class, 'index'])
+        ->middleware('module:invoices')
+        ->name('spv.index');
 
     /*
     |--------------------------------------------------------------------------
