@@ -638,10 +638,8 @@ class QuoteController extends Controller
         |--------------------------------------------------------------------------
         */
 
-        $client =
-            Client::findOrFail(
-                $validated['client_id']
-            );
+        $client = $this->resolveClient($validated);
+        $validated['client_id'] = $client->id;
 
         $validated['vat_rate'] =
             $this->vatRateForClient(
@@ -892,10 +890,8 @@ class QuoteController extends Controller
         |--------------------------------------------------------------------------
         */
 
-        $client =
-            Client::findOrFail(
-                $validated['client_id']
-            );
+        $client = $this->resolveClient($validated);
+        $validated['client_id'] = $client->id;
 
         $validated['vat_rate'] =
             $this->vatRateForClient(
@@ -1857,6 +1853,26 @@ class QuoteController extends Controller
     }
 
     /**
+     * Găsește clientul selectat sau creează unul nou din numele scris liber.
+     */
+    private function resolveClient(array $validated): Client
+    {
+        if (!empty($validated['client_id'])) {
+            return Client::findOrFail($validated['client_id']);
+        }
+
+        $name = trim((string) $validated['client_name']);
+
+        return Client::query()
+            ->whereRaw('LOWER(name) = ?', [mb_strtolower($name)])
+            ->first()
+            ?? Client::create([
+                'name' => $name,
+                'type' => 'firma',
+            ]);
+    }
+
+    /**
      * Validare comuna.
      *
      * vat_rate este primit doar pentru compatibilitate
@@ -1876,8 +1892,14 @@ class QuoteController extends Controller
             ],
 
             'client_id' => [
-                'required',
+                'nullable',
                 'exists:clients,id',
+            ],
+
+            'client_name' => [
+                'required_without:client_id',
+                'string',
+                'max:255',
             ],
 
             'license_id' => [

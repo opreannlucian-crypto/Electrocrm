@@ -1,4 +1,5 @@
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
+import ClientAutocomplete from "@/Components/ClientAutocomplete";
 import { Head, Link, useForm } from "@inertiajs/react";
 import { useEffect, useMemo, useState } from "react";
 
@@ -55,6 +56,8 @@ export default function Create({
     const documentLabelUpper = isDeviz
         ? "DEVIZ"
         : "OFERTĂ";
+
+    const clientNameForId = (clientId) => clients.find((client) => String(client.id) === String(clientId))?.name ?? "";
 
     /*
     |--------------------------------------------------------------------------
@@ -114,6 +117,9 @@ export default function Create({
 
         client_id:
             prefill?.client_id ?? "",
+
+        client_name:
+            prefill?.client_name ?? clientNameForId(prefill?.client_id),
 
         license_id:
             prefill?.license_id ?? "",
@@ -193,6 +199,10 @@ export default function Create({
                 prefill.client_id ??
                 current.client_id ??
                 "",
+
+            client_name:
+                prefill.client_name ??
+                (clientNameForId(prefill.client_id ?? current.client_id) || current.client_name || ""),
 
             license_id:
                 prefill.license_id ??
@@ -352,6 +362,10 @@ export default function Create({
             setData(
                 "client_id",
                 selectedWorkOrder.client_id
+            );
+            setData(
+                "client_name",
+                clientNameForId(selectedWorkOrder.client_id)
             );
         }
 
@@ -883,52 +897,13 @@ export default function Create({
                                         Client *
                                     </label>
 
-                                    <select
-                                        value={
-                                            data.client_id
-                                        }
-                                        onChange={(e) =>
-                                            setData(
-                                                "client_id",
-                                                e.target.value
-                                            )
-                                        }
-                                        className="w-full rounded-xl border-slate-300 focus:border-blue-500 focus:ring-blue-500"
-                                        required
-                                    >
-
-                                        <option value="">
-                                            Selectează clientul
-                                        </option>
-
-                                        {clients.map(
-                                            (
-                                                client
-                                            ) => (
-                                                <option
-                                                    key={
-                                                        client.id
-                                                    }
-                                                    value={
-                                                        client.id
-                                                    }
-                                                >
-                                                    {
-                                                        client.name
-                                                    }
-                                                </option>
-                                            )
-                                        )}
-
-                                    </select>
-
-                                    {errors.client_id && (
-                                        <div className="text-red-600 text-sm mt-1">
-                                            {
-                                                errors.client_id
-                                            }
-                                        </div>
-                                    )}
+                                    <ClientAutocomplete
+                                        clients={clients}
+                                        clientId={data.client_id}
+                                        value={data.client_name}
+                                        onChange={({ client_id, client_name }) => setData((current) => ({ ...current, client_id, client_name }))}
+                                        error={errors.client_id || errors.client_name}
+                                    />
 
                                 </div>
                                 )}
