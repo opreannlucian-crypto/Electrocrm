@@ -1,4 +1,5 @@
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
+import ClientAutocomplete from "@/Components/ClientAutocomplete";
 import { Head, Link, router } from "@inertiajs/react";
 import { useState } from "react";
 
@@ -11,6 +12,7 @@ export default function Create({
     template = null,
 }) {
     const [processing, setProcessing] = useState(false);
+    const clientNameForId = (clientId) => clients.find((client) => String(client.id) === String(clientId))?.name ?? "";
 
     const [data, setData] = useState({
         number: "",
@@ -31,6 +33,7 @@ export default function Create({
         status: "draft",
 
         client_id: "",
+        client_name: "",
 
         work_order_id: "",
         quote_id: "",
@@ -172,13 +175,6 @@ export default function Create({
         }));
     };
 
-    const handleClientChange = (event) => {
-        setField(
-            "client_id",
-            event.target.value
-        );
-    };
-
     const handleWorkOrderChange = (event) => {
         const value = event.target.value;
 
@@ -212,6 +208,10 @@ export default function Create({
                 workOrder.client_id ||
                 workOrder.client?.id ||
                 "",
+
+            client_name:
+                current.client_name ||
+                clientNameForId(workOrder.client_id || workOrder.client?.id),
 
             location:
                 current.location ||
@@ -279,6 +279,10 @@ export default function Create({
                 quote.client_id ||
                 quote.client?.id ||
                 "",
+
+            client_name:
+                current.client_name ||
+                clientNameForId(quote.client_id || quote.client?.id),
 
             title:
                 current.title === "CONTRACT"
@@ -642,35 +646,7 @@ export default function Create({
                                         Client
                                     </label>
 
-                                    <select
-                                        value={data.client_id}
-                                        onChange={
-                                            handleClientChange
-                                        }
-                                        className="w-full rounded-xl border-gray-300 bg-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                                    >
-                                        <option value="">
-                                            Fara client
-                                        </option>
-
-                                        {clients.map(
-                                            (client) => (
-                                                <option
-                                                    key={
-                                                        client.id
-                                                    }
-                                                    value={
-                                                        client.id
-                                                    }
-                                                >
-                                                    {
-                                                        client.name
-                                                    }
-                                                </option>
-                                            )
-                                        )}
-
-                                    </select>
+                                    <ClientAutocomplete clients={clients} clientId={data.client_id} value={data.client_name} onChange={({ client_id, client_name }) => setData((current) => ({ ...current, client_id, client_name }))} />
 
                                 </div>
 

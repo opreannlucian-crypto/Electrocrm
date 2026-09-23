@@ -514,6 +514,9 @@ class ContractController extends Controller
             }
         }
 
+        $this->resolveClient($validated);
+        unset($validated['client_name']);
+
         $validated['user_id'] =
             auth()->id();
 
@@ -700,6 +703,9 @@ class ContractController extends Controller
                 null;
         }
 
+        $this->resolveClient($validated);
+        unset($validated['client_name']);
+
         $contract->update(
             $validated
         );
@@ -855,6 +861,22 @@ class ContractController extends Controller
             );
     }
 
+    private function resolveClient(array &$validated): void
+    {
+        if (!empty($validated['client_id'])) {
+            return;
+        }
+
+        $name = trim((string) ($validated['client_name'] ?? ''));
+        if ($name === '') {
+            return;
+        }
+
+        $client = Client::query()->whereRaw('LOWER(name) = ?', [mb_strtolower($name)])->first()
+            ?? Client::create(['name' => $name, 'type' => 'firma']);
+        $validated['client_id'] = $client->id;
+    }
+
     /**
      * Validare comuna contract.
      */
@@ -894,6 +916,13 @@ class ContractController extends Controller
                 'nullable',
                 'integer',
                 'exists:clients,id',
+            ],
+
+            'client_name' => [
+                'required_without:client_id',
+                'nullable',
+                'string',
+                'max:255',
             ],
 
             'work_order_id' => [
