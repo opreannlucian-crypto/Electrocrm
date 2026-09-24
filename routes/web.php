@@ -39,6 +39,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\NotificationHistoryController;
 use App\Http\Controllers\NotificationSettingsController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\ProductCategoryController;
 use App\Http\Controllers\ProfileController;
@@ -689,6 +690,19 @@ Route::post(
         'quotes',
         QuoteController::class
     )->middleware('module:quotes');
+
+    Route::resource('projects', ProjectController::class)
+        ->only(['index', 'store', 'show'])
+        ->middleware('module:quotes');
+    Route::post('/projects/{project}/documents', [ProjectController::class, 'storeDocument'])
+        ->middleware('module:quotes')
+        ->name('projects.documents.store');
+    Route::get('/projects/{project}/documents/{document}/download', [ProjectController::class, 'downloadDocument'])
+        ->middleware('module:quotes')
+        ->name('projects.documents.download');
+    Route::delete('/projects/{project}/documents/{document}', [ProjectController::class, 'destroyDocument'])
+        ->middleware('module:quotes')
+        ->name('projects.documents.destroy');
 
     Route::resource('warehouses', WarehouseController::class)->only(['index','store','update','destroy'])->middleware('module:products');
     Route::get('/consumption-notes', [ConsumptionNoteController::class, 'index'])->middleware('module:products')->name('consumption-notes.index');

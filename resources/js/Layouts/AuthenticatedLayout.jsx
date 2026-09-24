@@ -147,10 +147,11 @@ export default function AuthenticatedLayout({
                                         label="Acte"
                                         open={actsOpen}
                                         onToggle={() => setActsOpen((value) => !value)}
-                                        active={route().current("quotes.*") || route().current("contracts.*") || route().current("reports.*")}
+                                        active={route().current("quotes.*") || route().current("contracts.*") || route().current("reports.*") || route().current("projects.*")}
                                     >
                                         <SidebarLink href={route("quotes.index")} active={route().current("quotes.*")} icon="📑" label="Oferte și devize" />
                                         <SidebarLink href={route("contracts.index")} active={route().current("contracts.*")} icon="📃" label="Contracte" />
+                                        <SidebarLink href={route("projects.index")} active={route().current("projects.*")} icon="📁" label="Proiecte" />
                                         <SidebarLink href={route("reports.index")} active={route().current("reports.*")} icon="📝" label="Procese-verbale" />
                                         <SidebarLink href={route("report-templates.index")} active={route().current("report-templates.*")} icon="📋" label="Șabloane procese-verbale" />
                                     </SidebarSection>
@@ -580,6 +581,7 @@ export default function AuthenticatedLayout({
                                     <MobileSection label="📑 Acte" open={actsOpen} onToggle={() => setActsOpen((value) => !value)}>
                                         <ResponsiveNavLink href={route("quotes.index")} active={route().current("quotes.*")}>📑 Oferte și devize</ResponsiveNavLink>
                                         <ResponsiveNavLink href={route("contracts.index")} active={route().current("contracts.*")}>📃 Contracte</ResponsiveNavLink>
+                                        <ResponsiveNavLink href={route("projects.index")} active={route().current("projects.*")}>📁 Proiecte</ResponsiveNavLink>
                                         <ResponsiveNavLink href={route("reports.index")} active={route().current("reports.*")}>📝 Procese-verbale</ResponsiveNavLink>
                                     </MobileSection>
                                     <MobileSection label="📊 Rapoarte" open={reportsOpen} onToggle={() => setReportsOpen((value) => !value)}>

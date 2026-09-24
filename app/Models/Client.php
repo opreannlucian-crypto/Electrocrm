@@ -46,6 +46,11 @@ class Client extends Model
         return $this->hasMany(WorkOrder::class);
     }
 
+    public function projects()
+    {
+        return $this->hasMany(Project::class);
+    }
+
     public function documents(): MorphMany
     {
         return $this->morphMany(DocumentAttachment::class, 'attachable')->latest();
