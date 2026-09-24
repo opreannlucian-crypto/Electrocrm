@@ -18,6 +18,8 @@ class ClientRevisionController extends Controller
             'client' => ['nullable', 'string', 'max:120'],
             'type' => ['nullable', 'in:efractie,incendiu'],
             'period' => ['nullable', 'in:trimestriala,semestriala,anuala,la_cerere'],
+            'date_from' => ['nullable', 'date'],
+            'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
             'status' => ['nullable', 'in:overdue,due_soon,scheduled,on_request'],
         ]);
         $today = now()->startOfDay();
@@ -29,6 +31,8 @@ class ClientRevisionController extends Controller
                 ->when($filters['client'] ?? null, fn ($query, $client) => $query->whereHas('client', fn ($clients) => $clients->where('name', 'like', '%' . $client . '%')))
                 ->when($filters['type'] ?? null, fn ($query, $type) => $query->where('type', $type))
                 ->when($filters['period'] ?? null, fn ($query, $period) => $query->where('period', $period))
+                ->when($filters['date_from'] ?? null, fn ($query, $date) => $query->whereDate('next_revision_date', '>=', $date))
+                ->when($filters['date_to'] ?? null, fn ($query, $date) => $query->whereDate('next_revision_date', '<=', $date))
                 ->when(($filters['status'] ?? null) === 'overdue', fn ($query) => $query->whereDate('next_revision_date', '<', $today->toDateString()))
                 ->when(($filters['status'] ?? null) === 'due_soon', fn ($query) => $query->whereDate('next_revision_date', '>=', $today->toDateString())->whereDate('next_revision_date', '<=', $soon->toDateString()))
                 ->when(($filters['status'] ?? null) === 'scheduled', fn ($query) => $query->whereDate('next_revision_date', '>', $soon->toDateString()))
