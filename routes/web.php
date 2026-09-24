@@ -740,6 +740,8 @@ Route::post(
     Route::get('/financial-reports/minutes', [MinutesReportController::class, 'index'])->middleware('module:reports')->name('financial-reports.minutes.index');
     Route::get('/financial-reports/contracts', [ContractsReportController::class, 'index'])->middleware('module:contracts')->name('financial-reports.contracts.index');
     Route::get('/revisions', [ClientRevisionController::class, 'index'])->middleware('module:reports')->name('revisions.index');
+    Route::get('/revisions/export/excel', [ClientRevisionController::class, 'excel'])->middleware('module:reports')->name('revisions.export.excel');
+    Route::get('/revisions/export/pdf', [ClientRevisionController::class, 'pdf'])->middleware('module:reports')->name('revisions.export.pdf');
     Route::post('/revisions', [ClientRevisionController::class, 'store'])->middleware('module:reports')->name('revisions.store');
     Route::patch('/revisions/{revision}', [ClientRevisionController::class, 'update'])->middleware('module:reports')->name('revisions.update');
     Route::get('/operational-reports/{kind}', [OperationalReportController::class, 'show'])->middleware('module:invoices')->name('operational-reports.show');
