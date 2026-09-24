@@ -18,7 +18,7 @@ class ClientRevision extends Model
 
     protected $fillable = [
         'client_id', 'type', 'period', 'last_revision_date',
-        'next_revision_date', 'last_work_order_id', 'reminder_sent_for',
+        'next_revision_date', 'last_work_order_id', 'scheduled_work_order_id', 'reminder_sent_for',
     ];
 
     protected $casts = [
@@ -35,6 +35,11 @@ class ClientRevision extends Model
     public function lastWorkOrder(): BelongsTo
     {
         return $this->belongsTo(WorkOrder::class, 'last_work_order_id');
+    }
+
+    public function scheduledWorkOrder(): BelongsTo
+    {
+        return $this->belongsTo(WorkOrder::class, 'scheduled_work_order_id');
     }
 
     public static function isRevisionWorkType(?string $type): bool
@@ -86,7 +91,56 @@ class ClientRevision extends Model
             'reminder_sent_for' => null,
         ]);
         $revision->save();
+        $revision->syncScheduledWorkOrder();
 
         return $revision;
+    }
+
+    public function syncScheduledWorkOrder(): ?WorkOrder
+    {
+        $scheduledWorkOrder = $this->scheduledWorkOrder;
+
+        if (!$this->next_revision_date) {
+            if ($scheduledWorkOrder && in_array($scheduledWorkOrder->status, ['noua', 'programata'], true)) {
+                $scheduledWorkOrder->update(['status' => 'anulata']);
+            }
+            $this->update(['scheduled_work_order_id' => null]);
+
+            return null;
+        }
+
+        $this->loadMissing('client');
+        $workOrderData = [
+            'client_id' => $this->client_id,
+            'type' => $this->type === self::TYPE_FIRE ? 'revizie_incendiu' : 'revizie_efractie',
+            'work_type' => $this->type === self::TYPE_FIRE ? 'Revizie incendiu' : 'Revizie efracție',
+            'revision_period' => $this->period,
+            'address' => $this->client?->address,
+            'contact_person' => $this->client?->contact_person,
+            'phone' => $this->client?->phone,
+            'scheduled_date' => $this->next_revision_date,
+            'status' => 'programata',
+            'priority' => 'normal',
+            'description' => 'Revizie ' . ($this->type === self::TYPE_FIRE ? 'incendiu' : 'efracție') . ' · ' . (match ($this->period) {
+                self::PERIOD_QUARTERLY => 'trimestrială',
+                self::PERIOD_SEMIANNUAL => 'semestrială',
+                self::PERIOD_ANNUAL => 'anuală',
+                default => 'la cerere',
+            }),
+            'notes' => 'Creată automat din registrul de revizii.',
+        ];
+
+        if ($scheduledWorkOrder && in_array($scheduledWorkOrder->status, ['noua', 'programata'], true)) {
+            $scheduledWorkOrder->update($workOrderData);
+
+            return $scheduledWorkOrder;
+        }
+
+        $workOrder = WorkOrder::create($workOrderData + [
+            'number' => 'WO-REV-' . $this->id . '-' . $this->next_revision_date->format('Ymd'),
+        ]);
+        $this->update(['scheduled_work_order_id' => $workOrder->id]);
+
+        return $workOrder;
     }
 }

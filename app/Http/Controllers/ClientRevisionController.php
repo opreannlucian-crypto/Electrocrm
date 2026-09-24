@@ -33,7 +33,7 @@ class ClientRevisionController extends Controller
         $client = $this->resolveClient($data);
         $lastDate = $data['last_revision_date'] ?? null;
 
-        ClientRevision::updateOrCreate(
+        $revision = ClientRevision::updateOrCreate(
             ['client_id' => $client->id, 'type' => $data['type']],
             [
                 'period' => $data['period'],
@@ -42,8 +42,9 @@ class ClientRevisionController extends Controller
                 'reminder_sent_for' => null,
             ],
         );
+        $revision->syncScheduledWorkOrder();
 
-        return back()->with('success', 'Revizia a fost salvată; următorul termen a fost calculat automat.');
+        return back()->with('success', 'Revizia a fost salvată și lucrarea a fost programată automat la următorul termen.');
     }
 
     public function update(Request $request, ClientRevision $revision)
@@ -60,8 +61,9 @@ class ClientRevisionController extends Controller
             'next_revision_date' => $lastDate ? ClientRevision::nextDateFor($data['period'], $lastDate) : null,
             'reminder_sent_for' => null,
         ]);
+        $revision->syncScheduledWorkOrder();
 
-        return back()->with('success', 'Revizia a fost actualizată.');
+        return back()->with('success', 'Revizia și lucrarea ei programată au fost actualizate.');
     }
 
     private function validated(Request $request): array
