@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Client;
 use App\Models\DashboardActivity;
 use App\Models\Employee;
+use App\Models\Invoice;
+use App\Models\ClientRevision;
 use App\Models\Quote;
 use App\Models\WorkOrder;
 use App\Models\WorkOrderTimeEntry;
@@ -75,6 +77,8 @@ class DashboardController extends Controller
             ->latest('id')
             ->take(12)
             ->get();
+
+        $analytics = $this->dashboardAnalytics();
 
         /*
         |--------------------------------------------------------------------------
@@ -338,6 +342,7 @@ class DashboardController extends Controller
 
                 'dashboardActivities' => $dashboardActivities,
                 'activityEmployees' => Employee::where('active', true)->orderBy('name')->get(['id', 'name']),
+                'analytics' => $analytics,
             ]
         );
     }
@@ -396,6 +401,7 @@ class DashboardController extends Controller
             'dashboardActivities' => DashboardActivity::with(['assignedEmployee:id,name', 'creator:id,name'])
                 ->where('assigned_employee_id', $user->employee_id)->whereDate('activity_date', '>=', $today)->orderBy('status')->orderBy('activity_date')->take(12)->get(),
             'activityEmployees' => [],
+            'analytics' => $this->emptyAnalytics(),
         ]);
     }
 
@@ -408,5 +414,63 @@ class DashboardController extends Controller
             ->sum(fn (WorkOrderTimeEntry $entry) => $entry->ended_at
                 ? ($entry->duration_minutes ?? $entry->started_at->diffInMinutes($entry->ended_at))
                 : $entry->started_at->diffInMinutes(now()));
+    }
+
+    private function dashboardAnalytics(): array
+    {
+        $today = now()->startOfDay();
+        $invoiceQuery = Invoice::query()
+            ->where('document_type', 'invoice')
+            ->whereNotIn('status', ['draft', 'cancelled']);
+        $currentRevenue = (float) (clone $invoiceQuery)
+            ->whereDate('issue_date', '>=', $today->copy()->subDays(29)->toDateString())
+            ->sum('total');
+        $previousRevenue = (float) (clone $invoiceQuery)
+            ->whereDate('issue_date', '>=', $today->copy()->subDays(59)->toDateString())
+            ->whereDate('issue_date', '<', $today->copy()->subDays(29)->toDateString())
+            ->sum('total');
+        $growth = $previousRevenue > 0 ? round((($currentRevenue - $previousRevenue) / $previousRevenue) * 100, 1) : null;
+
+        $monthlySales = collect(range(5, 0))->map(function (int $offset) use ($invoiceQuery) {
+            $month = now()->startOfMonth()->subMonths($offset);
+
+            return [
+                'label' => ucfirst($month->locale('ro')->translatedFormat('M')),
+                'sales' => (float) (clone $invoiceQuery)
+                    ->whereBetween('issue_date', [$month->copy()->startOfMonth()->toDateString(), $month->copy()->endOfMonth()->toDateString()])
+                    ->sum('total'),
+                'pipeline' => Quote::where('type', 'oferta')
+                    ->whereBetween('created_at', [$month->copy()->startOfMonth(), $month->copy()->endOfMonth()])
+                    ->count(),
+            ];
+        })->values()->all();
+
+        return [
+            'revenue' => $currentRevenue,
+            'revenue_growth' => $growth,
+            'new_clients' => Client::whereDate('created_at', '>=', $today->copy()->startOfWeek()->toDateString())->count(),
+            'lead_stages' => [
+                ['label' => 'Ciornă', 'value' => Quote::where('type', 'oferta')->where('status', 'draft')->count(), 'color' => '#94a3b8'],
+                ['label' => 'Trimise', 'value' => Quote::where('type', 'oferta')->where('status', 'sent')->count(), 'color' => '#6366f1'],
+                ['label' => 'Acceptate', 'value' => Quote::where('type', 'oferta')->where('status', 'accepted')->count(), 'color' => '#16a34a'],
+                ['label' => 'Respinse', 'value' => Quote::where('type', 'oferta')->where('status', 'rejected')->count(), 'color' => '#f59e0b'],
+            ],
+            'monthly_sales' => $monthlySales,
+            'revisions_due' => ClientRevision::whereNotNull('next_revision_date')
+                ->whereDate('next_revision_date', '<=', $today->copy()->addDays(30)->toDateString())
+                ->count(),
+        ];
+    }
+
+    private function emptyAnalytics(): array
+    {
+        return [
+            'revenue' => 0,
+            'revenue_growth' => null,
+            'new_clients' => 0,
+            'lead_stages' => [],
+            'monthly_sales' => [],
+            'revisions_due' => 0,
+        ];
     }
 }

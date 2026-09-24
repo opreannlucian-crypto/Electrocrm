@@ -1,4 +1,5 @@
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
+import DashboardBento from "@/Components/DashboardBento";
 import { Head, Link, router, useForm, usePage } from "@inertiajs/react";
 import { useEffect, useMemo, useState } from "react";
 
@@ -161,6 +162,7 @@ export default function Dashboard({
     latestWorkOrders = [],
     dashboardActivities = [],
     activityEmployees = [],
+    analytics = {},
 }) {
     const user = usePage().props.auth.user;
     const isTechnician = user?.role === "technician";
@@ -416,7 +418,9 @@ export default function Dashboard({
                 formatDate={formatDate}
             />
 
-            <div className="hidden py-8 lg:block">
+            <DashboardBento user={user} stats={stats} quoteStats={quoteStats} analytics={analytics} scheduledToday={scheduledToday} dashboardActivities={dashboardActivities} formatDate={formatDate} formatWorkTime={formatWorkTime} />
+
+            <div className="hidden">
                 <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 
                     {/* =====================================================
