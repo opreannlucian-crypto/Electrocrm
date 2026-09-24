@@ -5,6 +5,7 @@ namespace App\Services\Notifications;
 use App\Enums\UserRole;
 use App\Models\Employee;
 use App\Models\Invoice;
+use App\Models\ClientRevision;
 use App\Models\NotificationDelivery;
 use App\Models\NotificationEvent;
 use App\Models\NotificationRule;
@@ -193,6 +194,17 @@ class NotificationOrchestrator
                 'title' => 'Factură emisă: ' . $subject->number,
                 'body' => 'Factura pentru ' . ($subject->client?->name ?: 'client') . ' a fost emisă în valoare de ' . number_format((float) $subject->total, 2, ',', '.') . ' RON.',
                 'action_url' => route('invoices.show', $subject, false),
+            ];
+        }
+
+        if ($subject instanceof ClientRevision) {
+            $type = $subject->type === ClientRevision::TYPE_FIRE ? 'incendiu' : 'efracție';
+            $date = $subject->next_revision_date?->format('d.m.Y') ?: 'neprecizată';
+
+            return [
+                'title' => 'Revizie ' . $type . ' scadentă',
+                'body' => 'Client: ' . ($subject->client?->name ?: 'neprecizat') . '. Următoarea revizie este la ' . $date . '.',
+                'action_url' => route('revisions.index', ['type' => $subject->type], false),
             ];
         }
 

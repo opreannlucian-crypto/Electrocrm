@@ -70,6 +70,7 @@ class NotificationSettingsController extends Controller
             'work_order.completed' => 'Lucrare finalizată',
             'work_order.cancelled' => 'Lucrare anulată',
             'work_order.reminder_24h' => 'Reminder lucrare cu 24 ore înainte',
+            'revision.due_soon' => 'Reminder revizie apropiată',
             'invoice.issued' => 'Factură emisă',
         ];
     }

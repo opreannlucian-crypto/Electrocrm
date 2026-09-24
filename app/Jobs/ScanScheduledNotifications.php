@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Events\DomainNotificationEvent;
 use App\Models\WorkOrder;
+use App\Models\ClientRevision;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -52,6 +53,24 @@ class ScanScheduledNotifications implements ShouldQueue, ShouldBeUniqueUntilProc
                     null,
                     ['dedupe_context' => 'reminder-24h:' . $workOrder->id . ':' . $date . ':' . $time],
                 );
+            });
+
+        ClientRevision::query()
+            ->with('client')
+            ->whereNotNull('next_revision_date')
+            ->whereDate('next_revision_date', '<=', now()->addDays(30)->toDateString())
+            ->get()
+            ->filter(fn (ClientRevision $revision) => !$revision->reminder_sent_for
+                || !$revision->reminder_sent_for->isSameDay($revision->next_revision_date))
+            ->each(function (ClientRevision $revision) {
+                DomainNotificationEvent::dispatch(
+                    'revision.due_soon',
+                    $revision,
+                    null,
+                    ['dedupe_context' => 'revision-due:' . $revision->id . ':' . $revision->next_revision_date->format('Y-m-d')],
+                );
+
+                $revision->update(['reminder_sent_for' => $revision->next_revision_date]);
             });
     }
 }

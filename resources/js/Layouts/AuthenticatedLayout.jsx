@@ -223,7 +223,7 @@ export default function AuthenticatedLayout({
                                         label="Rapoarte"
                                         open={reportsOpen}
                                         onToggle={() => setReportsOpen((value) => !value)}
-                                        active={route().current("suppliers.*") || route().current("financial-reports.*") || route().current("warehouses.*") || route().current("reports.technician-hours.*") || route().current("reports.activity-journal.*")}
+                                        active={route().current("suppliers.*") || route().current("financial-reports.*") || route().current("warehouses.*") || route().current("revisions.*") || route().current("reports.technician-hours.*") || route().current("reports.activity-journal.*")}
                                     >
                                         <SidebarLink href={route("suppliers.index")} active={route().current("suppliers.*")} icon="🏭" label="Furnizori" />
                                         <SidebarLink href={route("financial-reports.suppliers.index")} active={route().current("financial-reports.suppliers.*")} icon="📊" label="Sold furnizori" />
@@ -234,6 +234,7 @@ export default function AuthenticatedLayout({
                                         <SidebarLink href={route("financial-reports.stocks.index")} active={route().current("financial-reports.stocks.*")} icon="📦" label="Raport stocuri" />
                                         <SidebarLink href={route("financial-reports.minutes.index")} active={route().current("financial-reports.minutes.*")} icon="📝" label="Raport procese-verbale" />
                                         <SidebarLink href={route("financial-reports.contracts.index")} active={route().current("financial-reports.contracts.*")} icon="📃" label="Raport contracte" />
+                                        <SidebarLink href={route("revisions.index")} active={route().current("revisions.*")} icon="🛡️" label="Revizii" />
                                         <SidebarLink href={route("operational-reports.show", "receptions")} active={route().current("operational-reports.show") && route().params.kind === "receptions"} icon="📥" label="Raport recepții" />
                                         <SidebarLink href={route("operational-reports.show", "proformas")} active={route().current("operational-reports.show") && route().params.kind === "proformas"} icon="📄" label="Raport proforme" />
                                         <SidebarLink href={route("operational-reports.show", "bank-journal")} active={route().current("operational-reports.show") && route().params.kind === "bank-journal"} icon="🏦" label="Jurnal bancă" />
@@ -593,6 +594,7 @@ export default function AuthenticatedLayout({
                                         <ResponsiveNavLink href={route("financial-reports.cash-register.index")} active={route().current("financial-reports.cash-register.*")}>💵 Registru de casă</ResponsiveNavLink>
                                         <ResponsiveNavLink href={route("financial-reports.minutes.index")} active={route().current("financial-reports.minutes.*")}>📝 Raport procese-verbale</ResponsiveNavLink>
                                         <ResponsiveNavLink href={route("financial-reports.contracts.index")} active={route().current("financial-reports.contracts.*")}>📃 Raport contracte</ResponsiveNavLink>
+                                        <ResponsiveNavLink href={route("revisions.index")} active={route().current("revisions.*")}>🛡️ Revizii</ResponsiveNavLink>
                                         <ResponsiveNavLink href={route("operational-reports.show", "receptions")} active={route().current("operational-reports.show")}>📥 Raport recepții</ResponsiveNavLink>
                                         <ResponsiveNavLink href={route("operational-reports.show", "proformas")} active={route().current("operational-reports.show")}>📄 Raport proforme</ResponsiveNavLink>
                                         <ResponsiveNavLink href={route("operational-reports.show", "bank-journal")} active={route().current("operational-reports.show")}>🏦 Jurnal bancă</ResponsiveNavLink>

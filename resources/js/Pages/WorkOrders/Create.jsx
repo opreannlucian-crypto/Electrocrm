@@ -27,6 +27,7 @@ export default function Create({
         employee_ids: [],
         license_id: "",
         type: "",
+        revision_period: "anuala",
         priority: "normal",
         status: "noua",
         scheduled_date: "",
@@ -462,6 +463,14 @@ export default function Create({
                                             <option value="service">
                                                 Service
                                             </option>
+
+                                            <option value="revizie_efractie">
+                                                Revizie efracție
+                                            </option>
+
+                                            <option value="revizie_incendiu">
+                                                Revizie incendiu
+                                            </option>
                                         </select>
 
                                         {errors.type && (
@@ -470,6 +479,16 @@ export default function Create({
                                             </p>
                                         )}
                                     </div>
+
+                                    {(data.type === "revizie_efractie" || data.type === "revizie_incendiu") && <div>
+                                        <label className="mb-2 block font-semibold text-slate-700">Periodicitate revizie</label>
+                                        <select className="w-full rounded-xl border-gray-300 p-3 shadow-sm focus:border-blue-500 focus:ring-blue-500" value={data.revision_period} onChange={(e) => setData("revision_period", e.target.value)}>
+                                            <option value="trimestriala">Trimestrială</option>
+                                            <option value="semestriala">Semestrială</option>
+                                            <option value="anuala">Anuală</option>
+                                            <option value="la_cerere">La cerere</option>
+                                        </select>
+                                    </div>}
 
                                     <div>
                                         <label className="mb-2 block font-semibold text-slate-700">

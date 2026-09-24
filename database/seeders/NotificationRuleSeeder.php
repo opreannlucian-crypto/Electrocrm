@@ -21,6 +21,7 @@ class NotificationRuleSeeder extends Seeder
             'work_order.completed',
             'work_order.cancelled',
             'work_order.reminder_24h',
+            'revision.due_soon',
             'invoice.issued',
         ];
 

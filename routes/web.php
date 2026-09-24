@@ -40,6 +40,7 @@ use App\Http\Controllers\NotificationHistoryController;
 use App\Http\Controllers\NotificationSettingsController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\ClientRevisionController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\ProductCategoryController;
 use App\Http\Controllers\ProfileController;
@@ -738,6 +739,9 @@ Route::post(
     Route::get('/financial-reports/stocks', [StockReportController::class, 'index'])->middleware('module:products')->name('financial-reports.stocks.index');
     Route::get('/financial-reports/minutes', [MinutesReportController::class, 'index'])->middleware('module:reports')->name('financial-reports.minutes.index');
     Route::get('/financial-reports/contracts', [ContractsReportController::class, 'index'])->middleware('module:contracts')->name('financial-reports.contracts.index');
+    Route::get('/revisions', [ClientRevisionController::class, 'index'])->middleware('module:reports')->name('revisions.index');
+    Route::post('/revisions', [ClientRevisionController::class, 'store'])->middleware('module:reports')->name('revisions.store');
+    Route::patch('/revisions/{revision}', [ClientRevisionController::class, 'update'])->middleware('module:reports')->name('revisions.update');
     Route::get('/operational-reports/{kind}', [OperationalReportController::class, 'show'])->middleware('module:invoices')->name('operational-reports.show');
     Route::get('/financial-reports/invoices/excel', [InvoiceReportController::class, 'excel'])->name('financial-reports.invoices.excel');
     Route::get('/financial-reports/invoices/pdf', [InvoiceReportController::class, 'pdf'])->name('financial-reports.invoices.pdf');

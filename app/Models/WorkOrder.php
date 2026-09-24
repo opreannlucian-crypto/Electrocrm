@@ -16,6 +16,7 @@ class WorkOrder extends Model
         'license_id',
         'number',
         'type',
+        'revision_period',
         'work_type',
         'address',
         'contact_person',

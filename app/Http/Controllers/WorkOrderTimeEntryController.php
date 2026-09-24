@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\WorkOrder;
+use App\Models\ClientRevision;
 use App\Models\WorkOrderTimeEntry;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -123,6 +124,8 @@ class WorkOrderTimeEntryController extends Controller
                 'completed_at' => $endedAt,
                 'status' => 'finalizata',
             ]);
+            $workOrder->refresh();
+            ClientRevision::recordCompletion($workOrder);
         }
 
         return back()->with(

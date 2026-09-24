@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Events\DomainNotificationEvent;
 use App\Models\Client;
+use App\Models\ClientRevision;
 use App\Models\Employee;
 use App\Models\License;
 use App\Models\Product;
@@ -156,6 +157,11 @@ class WorkOrderController extends Controller
                 'max:255',
             ],
 
+            'revision_period' => [
+                'nullable',
+                'in:trimestriala,semestriala,anuala,la_cerere',
+            ],
+
             'work_type' => [
                 'nullable',
                 'string',
@@ -233,6 +239,10 @@ class WorkOrderController extends Controller
 
         $validated['work_type'] = $validated['work_type'] ?? $validated['type'];
 
+        if (!ClientRevision::isRevisionWorkType($validated['type'])) {
+            $validated['revision_period'] = null;
+        }
+
         $clientName = trim($validated['client_name']);
         $client = !empty($validated['client_id'])
             ? Client::find($validated['client_id'])
@@ -271,6 +281,10 @@ class WorkOrderController extends Controller
             $validated['employee_ids'] = [$user->employee_id];
             $validated['status'] = 'noua';
             $validated['materials_used'] = [];
+        }
+
+        if (($validated['status'] ?? null) === 'finalizata') {
+            $validated['completed_at'] = now();
         }
 
         $validated['number'] = 'WO-' . date('YmdHis');
@@ -340,6 +354,11 @@ class WorkOrderController extends Controller
 
             return $workOrder;
         });
+
+        if ($workOrder->status === 'finalizata') {
+            $workOrder->refresh();
+            ClientRevision::recordCompletion($workOrder);
+        }
 
         $this->publishWorkOrderEvent(
             'work_order.created',
@@ -697,6 +716,11 @@ class WorkOrderController extends Controller
                 'max:255',
             ],
 
+            'revision_period' => [
+                'nullable',
+                'in:trimestriala,semestriala,anuala,la_cerere',
+            ],
+
             'priority' => [
                 'required',
                 'string',
@@ -781,6 +805,14 @@ class WorkOrderController extends Controller
             $validated['status'] = 'noua';
         }
 
+        if (!ClientRevision::isRevisionWorkType($validated['type'])) {
+            $validated['revision_period'] = null;
+        }
+
+        if ($previousStatus !== 'finalizata' && ($validated['status'] ?? null) === 'finalizata') {
+            $validated['completed_at'] = now();
+        }
+
         /*
         |--------------------------------------------------------------------------
         | TEHNICIENI
@@ -853,6 +885,11 @@ class WorkOrderController extends Controller
         });
 
         $workOrder->refresh();
+
+        if ($previousStatus !== 'finalizata' && $workOrder->status === 'finalizata') {
+            ClientRevision::recordCompletion($workOrder);
+        }
+
         $currentScheduledDate = $workOrder->scheduled_date?->format('Y-m-d');
         $currentScheduledTime = $workOrder->scheduled_time ? substr((string) $workOrder->scheduled_time, 0, 5) : null;
         $currentEmployeeIds = $workOrder->employees()
@@ -1210,6 +1247,11 @@ class WorkOrderController extends Controller
 
         if ($statusEventKey && $oldStatus !== $newStatus) {
             $workOrder->refresh();
+
+            if ($newStatus === 'finalizata') {
+                ClientRevision::recordCompletion($workOrder);
+            }
+
             $this->publishWorkOrderEvent(
                 $statusEventKey,
                 $workOrder,
