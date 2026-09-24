@@ -723,7 +723,7 @@ export default function AuthenticatedLayout({
                     ==================================================== */}
 
                     {header && (
-                        <header className="bg-white shadow-sm">
+                        <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/80 shadow-sm backdrop-blur-xl">
                             <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
                                 {header}
                             </div>
