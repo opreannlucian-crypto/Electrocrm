@@ -14,19 +14,31 @@ class ClientRevisionController extends Controller
 {
     public function index(Request $request)
     {
-        $type = $request->string('type')->toString();
-        abort_unless(in_array($type, ['', ClientRevision::TYPE_BURGLARY, ClientRevision::TYPE_FIRE], true), 404);
+        $filters = $request->validate([
+            'client' => ['nullable', 'string', 'max:120'],
+            'type' => ['nullable', 'in:efractie,incendiu'],
+            'period' => ['nullable', 'in:trimestriala,semestriala,anuala,la_cerere'],
+            'status' => ['nullable', 'in:overdue,due_soon,scheduled,on_request'],
+        ]);
+        $today = now()->startOfDay();
+        $soon = $today->copy()->addDays(30);
 
         return Inertia::render('Revisions/Index', [
             'revisions' => ClientRevision::query()
                 ->with('client')
-                ->when($type, fn ($query) => $query->where('type', $type))
+                ->when($filters['client'] ?? null, fn ($query, $client) => $query->whereHas('client', fn ($clients) => $clients->where('name', 'like', '%' . $client . '%')))
+                ->when($filters['type'] ?? null, fn ($query, $type) => $query->where('type', $type))
+                ->when($filters['period'] ?? null, fn ($query, $period) => $query->where('period', $period))
+                ->when(($filters['status'] ?? null) === 'overdue', fn ($query) => $query->whereDate('next_revision_date', '<', $today->toDateString()))
+                ->when(($filters['status'] ?? null) === 'due_soon', fn ($query) => $query->whereDate('next_revision_date', '>=', $today->toDateString())->whereDate('next_revision_date', '<=', $soon->toDateString()))
+                ->when(($filters['status'] ?? null) === 'scheduled', fn ($query) => $query->whereDate('next_revision_date', '>', $soon->toDateString()))
+                ->when(($filters['status'] ?? null) === 'on_request', fn ($query) => $query->whereNull('next_revision_date'))
                 ->orderByRaw('next_revision_date is null, next_revision_date')
                 ->paginate(30)
                 ->withQueryString(),
             'clients' => Client::query()->orderBy('name')->get(['id', 'name', 'cui']),
-            'filters' => ['type' => $type],
-            'today' => now()->toDateString(),
+            'filters' => $filters,
+            'today' => $today->toDateString(),
         ]);
     }
 
