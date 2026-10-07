@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\{CashPayment, Invoice, InvoiceItem, Reception, Receipt, SupplierPayment};
+use App\Models\{CashPayment, Invoice, InvoiceItem, Product, Reception, Receipt, Supplier, SupplierPayment};
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -16,7 +16,12 @@ class OperationalReportController extends Controller
     {
         abort_unless(in_array($kind, self::KINDS, true), 404);
         abort_unless($request->user()?->isAdministrator() || $request->user()?->isSalesManager(), 403);
-        $filters = $request->validate(['from' => ['nullable', 'date'], 'to' => ['nullable', 'date', 'after_or_equal:from']]);
+        $filters = $request->validate([
+            'from' => ['nullable', 'date'],
+            'to' => ['nullable', 'date', 'after_or_equal:from'],
+            'supplier_id' => ['nullable', 'integer', 'exists:suppliers,id'],
+            'product' => ['nullable', 'string', 'max:255'],
+        ]);
         $data = match ($kind) {
             'receptions' => $this->receptions($filters),
             'proformas' => $this->proformas($filters),
@@ -38,8 +43,24 @@ class OperationalReportController extends Controller
 
     private function receptions(array $filters): array
     {
-        $rows = $this->date(Reception::with(['supplier:id,name','warehouse:id,name']), $filters, 'received_at')->latest('received_at')->get()->map(fn ($r) => [$r->received_at?->format('Y-m-d'), $r->number, $r->supplier?->name ?? '—', $r->warehouse?->name ?? '—', (float) $r->total]);
-        return $this->table('Raport recepții furnizori', 'Intrările în gestiune din recepțiile de la furnizori.', ['Data','NIR','Furnizor','Gestiune','Total'], $rows, [['label'=>'Total recepționat','value'=>$rows->sum(4)]]);
+        $query = $this->date(Reception::with(['supplier:id,name', 'warehouse:id,name']), $filters, 'received_at')
+            ->when($filters['supplier_id'] ?? null, fn ($query, $supplierId) => $query->where('supplier_id', $supplierId))
+            ->when($filters['product'] ?? null, function ($query, $product) {
+                $search = '%' . trim($product) . '%';
+
+                $query->whereHas('items', fn ($items) => $items
+                    ->where('product_name', 'like', $search)
+                    ->orWhereHas('product', fn ($products) => $products->where('name', 'like', $search)));
+            });
+
+        $rows = $query->latest('received_at')->get()->map(fn ($r) => [$r->received_at?->format('Y-m-d'), $r->number, $r->supplier?->name ?? '—', $r->warehouse?->name ?? '—', (float) $r->total]);
+        $report = $this->table('Raport recepții furnizori', 'Intrările în gestiune din recepțiile de la furnizori.', ['Data','NIR','Furnizor','Gestiune','Total'], $rows, [['label'=>'Total recepționat','value'=>$rows->sum(4)]]);
+        $report['filterOptions'] = [
+            'suppliers' => Supplier::where('active', true)->orderBy('name')->get(['id', 'name']),
+            'products' => Product::where('active', true)->orderBy('name')->get(['id', 'name', 'code']),
+        ];
+
+        return $report;
     }
 
     private function proformas(array $filters): array
