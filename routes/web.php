@@ -735,6 +735,8 @@ Route::post(
     Route::delete('/receipts/{receipt}', [ReceiptController::class, 'destroy'])->middleware('module:invoices')->name('receipts.destroy');
     Route::get('/financial-reports/invoices', [InvoiceReportController::class, 'index'])->name('financial-reports.invoices.index');
     Route::get('/financial-reports/suppliers', [SupplierBalanceReportController::class, 'index'])->middleware('module:invoices')->name('financial-reports.suppliers.index');
+    Route::get('/financial-reports/suppliers/excel', [SupplierBalanceReportController::class, 'excel'])->middleware('module:invoices')->name('financial-reports.suppliers.excel');
+    Route::get('/financial-reports/suppliers/pdf', [SupplierBalanceReportController::class, 'pdf'])->middleware('module:invoices')->name('financial-reports.suppliers.pdf');
     Route::get('/financial-reports/receipts', [ReceiptReportController::class, 'index'])->middleware('module:invoices')->name('financial-reports.receipts.index');
     Route::get('/financial-reports/stocks', [StockReportController::class, 'index'])->middleware('module:products')->name('financial-reports.stocks.index');
     Route::get('/financial-reports/minutes', [MinutesReportController::class, 'index'])->middleware('module:reports')->name('financial-reports.minutes.index');
