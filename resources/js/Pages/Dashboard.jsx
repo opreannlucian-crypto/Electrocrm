@@ -418,7 +418,7 @@ export default function Dashboard({
                 formatDate={formatDate}
             />
 
-            <DashboardBento user={user} stats={stats} quoteStats={quoteStats} analytics={analytics} scheduledToday={scheduledToday} dashboardActivities={dashboardActivities} formatDate={formatDate} formatWorkTime={formatWorkTime} />
+            <DashboardBento user={user} stats={stats} quoteStats={quoteStats} analytics={analytics} scheduledToday={scheduledToday} dashboardActivities={dashboardActivities} activityEmployees={activityEmployees} formatDate={formatDate} formatWorkTime={formatWorkTime} />
 
             <div className="hidden">
                 <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
